@@ -15,7 +15,7 @@ clean:
 .PHONY: clean
 
 deps:
-	go get -u github.com/jteeuwen/go-bindata/...
+	go get -u github.com/go-bindata/go-bindata/...
 .PHONY: deps
 
 generate: deps

@@ -1,0 +1,31 @@
+{
+  "plugin": "custom",
+  "pluginConfig": {
+    "invoke_interval": "30s",
+    "timeout": "10s",
+    "concurrency": 3
+  },
+  "source": "file-existence-monitor",
+  "conditions": [
+    {
+      "type": "FileExistenceProblem",
+      "reason": "FileMissing",
+      "message": "a custom file doesn't exist"
+    }
+  ],
+  "rules": [
+    {
+      "type": "temporary",
+      "reason": "FileExists",
+      "path": "/etc/npd-plugins/check-file-existence.sh",
+      "timeout": "5s"
+    },
+    {
+      "type": "permanent",
+      "condition": "FileExistenceProblem",
+      "reason": "FileExists",
+      "path": "/etc/npd-plugins/check-file-existence.sh",
+      "timeout": "5s"
+    }
+  ]
+}

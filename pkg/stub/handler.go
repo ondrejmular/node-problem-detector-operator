@@ -198,7 +198,8 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Command: []string{"node-problem-detector", "--logtostderr", "--system-log-monitors=/etc/npd/kernel-monitor.json,/etc/npd/docker-monitor.json", "--custom-plugin-monitors=/etc/npd/kubelet-monitor.json"},
+							// added a custom plugin monitor config for file existence monitor
+							Command: []string{"/node-problem-detector", "--logtostderr", "--system-log-monitors=/etc/npd/kernel-monitor.json,/etc/npd/docker-monitor.json", "--custom-plugin-monitors=/etc/npd/kubelet-monitor.json,/etc/npd/file-existence-monitor.json"},
 							Env: []corev1.EnvVar{
 								{
 									Name: "NODE_NAME",
@@ -210,7 +211,9 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 									},
 								},
 							},
-							Image:           "openshift/ose-node-problem-detector:v4.0",
+							// Don't have access to openshift image therefore using an upstream image
+							// Image:           "openshift/ose-node-problem-detector:v4.0",
+							Image:           "k8s.gcr.io/node-problem-detector:v0.8.1",
 							ImagePullPolicy: corev1.PullPolicy(cr.Spec.ImagePullPolicy),
 							Name:            "node-problem-detector",
 							Resources:       corev1.ResourceRequirements{},
@@ -237,6 +240,11 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 								{
 									MountPath: "/etc/npd-plugins",
 									Name:      "plugins",
+								},
+								// Mounting host's root FS for being able to monitor files on the host
+								{
+									MountPath: "/rootfs",
+									Name:      "rootfs",
 								},
 							},
 						},
@@ -284,6 +292,14 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 								},
 							},
 						},
+						{
+							Name: "rootfs",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -296,9 +312,10 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 
 func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
 	data := map[string]string{
-		"docker-monitor.json":  assets.ReadAsset(assets.ConfigDockerMonitor),
-		"kernel-monitor.json":  assets.ReadAsset(assets.ConfigKernelMonitor),
-		"kubelet-monitor.json": assets.ReadAsset(assets.ConfigKubeletMonitor),
+		"docker-monitor.json":         assets.ReadAsset(assets.ConfigDockerMonitor),
+		"kernel-monitor.json":         assets.ReadAsset(assets.ConfigKernelMonitor),
+		"kubelet-monitor.json":        assets.ReadAsset(assets.ConfigKubeletMonitor),
+		"file-existence-monitor.json": assets.ReadAsset(assets.ConfigFileExistenceMonitor),
 	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -315,7 +332,8 @@ func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
 
 func newNPDPlugins(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
 	data := map[string]string{
-		"kubelet-health.sh": assets.ReadAsset(assets.PluginKubeletHealth),
+		"kubelet-health.sh":       assets.ReadAsset(assets.PluginKubeletHealth),
+		"check-file-existence.sh": assets.ReadAsset(assets.PluginCheckFileExistence),
 	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
         - name: node-problem-detector-operator
-          image: registry.svc.ci.openshift.org/openshift/origin-v4.0:node-problem-detector-operator
+          # image: registry.svc.ci.openshift.org/openshift/origin-v4.0:node-problem-detector-operator
+          image: quay.io/omular/node-problem-detector-operator:test7
           ports:
           - containerPort: 60000
             name: metrics
